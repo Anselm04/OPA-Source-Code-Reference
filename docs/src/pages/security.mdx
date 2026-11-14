@@ -1,0 +1,66 @@
+import Callout from "../components/Callout";
+
+<Callout>
+  The OPA team has a high volume of security reports. Please be considerate when submitting a report.
+</Callout>
+
+# Security Policy
+
+This page explains how to report a security issue to the Open Policy Agent (OPA) community and how we handle it.
+
+---
+
+## Reporting a Security Bug
+
+- Before you report an issue, read the OPA [security](https://www.openpolicyagent.org/docs/security) documentation.
+  We do not accept reports that need an OPA server with authentication and authorization turned off, because OPA does
+  not protect its APIs in that state. Authentication proves who you are. Authorization decides what you may do.
+
+- If you want to forward potential security issues reported to you by publicly available vulnerability scanners, we
+  appreciate that. Such issues should however be considered public knowledge, and as such we prefer that you report
+  them via normal GitHub issues. Please do not report them through the security email list.
+
+- If you think you have found a security issue in an OPA project, please send an email to
+  [open-policy-agent-security@googlegroups.com](mailto:open-policy-agent-security@googlegroups.com).
+  A small security team reads this address. We will confirm that we received your report and decide how serious it is.
+
+  - Keep your report short. Say what is wrong, which version is affected, and the smallest steps to reproduce it.
+    Short reports help us to reproduce and triage the issue quickly.
+
+  - Please do not send attachments. Please do not link to files you have created, such as archives, repositories or
+    videos. Put the steps in the email text. Links are only for existing public reference material, such as a
+    CVE, a specification or the OPA documentation.
+
+  - If you would like to be credited for your report, include your GitHub handle in the email.
+
+- After we reply, we will tell you how the fix is going and when we will announce it. We may ask you for more information.
+
+- If you have not received a reply within two weekdays, post in the `#contributors` channel on our [Slack](https://slack.openpolicyagent.org).
+  The channel is public, so do not share details of your issue. Say only that you are trying to reach the security team.
+
+---
+
+## Disclosure Policy
+
+1. The security report is received and is assigned a primary handler. This person will coordinate the fix and release process.
+   The problem is confirmed and a list of all affected versions is determined. Code is audited to find any potential similar problems.
+   Fixes are prepared for all releases which are still under maintenance. These fixes are not committed to the public repository but rather held locally or in a private fork pending the announcement.
+
+2. A suggested embargo date for this vulnerability is chosen and a CVE (Common Vulnerabilities and Exposures (CVE®)) is requested for the vulnerability, through the GitHub Advisory database.
+
+3. A prenotification may be published on the security announcements channels listed below, providing information about affected projects, severity, and the embargo date.
+
+4. On the embargo date, the announcement is published. The changes are pushed to the public repository and new builds are deployed.
+
+5. Typically the embargo date will be set 72 hours from the time the CVE is issued. However, this may vary depending on the severity of the bug or difficulty in applying a fix.
+
+6. This process can take some time, especially when coordination is required with maintainers of other projects. Every effort will be made to handle the bug in as timely a manner as possible; however, it’s important that we follow the release process above to ensure that the disclosure is handled in a consistent manner.
+
+---
+
+## Receiving Security Updates
+
+- [Security Advisories for OPA](https://github.com/open-policy-agent/opa/security/advisories)
+- [GitHub Discussions Announcements](https://github.com/orgs/open-policy-agent/discussions/categories/announcements)
+- [Slack](https://slack.openpolicyagent.org) `#announcements` channel
+- [NIST Vulnerability Database: Search Results for OPA](https://nvd.nist.gov/vuln/search/results?form_type=Advanced&results_type=overview&search_type=all&isCpeNameSearch=false&cpe_vendor=cpe%3A%2F%3Aopenpolicyagent&cpe_product=cpe%3A%2F%3Aopenpolicyagent%3Aopen_policy_agent)

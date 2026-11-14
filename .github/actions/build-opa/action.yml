@@ -1,0 +1,20 @@
+name: 'Build OPA'
+description: 'Build OPA from source and add to PATH'
+
+inputs:
+  go-version-file:
+    description: 'Path to .go-version file'
+    required: false
+    default: '.go-version'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v6.4.0  # zizmor: ignore[unpinned-uses] covered by actions.lock
+      with:
+        go-version-file: ${{ inputs.go-version-file }}
+
+    - name: Build OPA
+      shell: bash
+      run: go install .
