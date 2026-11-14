@@ -1,0 +1,202 @@
+name: Nightly
+on:
+  workflow_dispatch: {}   # Allow for manual triggers
+  schedule:
+    - cron:  '0 5 * * 1-5' # Mon-Fri, at 5:00 UTC
+
+permissions:
+  contents: read
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }}
+
+jobs:
+  race-detector:
+    name: Go Race Detector
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test with Race Detector
+        run: make ci-go-race-detector
+
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v4.0.0
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        with:
+          webhook: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }} # zizmor: ignore[secrets-outside-env]
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Nightly check failed: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} - ${{ github.job }}>"
+            }
+
+  native-fuzzer:
+    name: Go Fuzzer (native)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: .go-version
+
+      - name: go test -fuzz
+        run: go test ./ast -fuzz FuzzParseStatementsAndCompileModules -fuzztime 1h -v -run '^$'
+
+      - name: Dump crashers
+        if: ${{ failure() }}
+        run: find ast/testdata/fuzz ! -name '*.stmt' ! -type d -print -exec cat {} \;
+
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v4.0.0
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        with:
+          webhook: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }} # zizmor: ignore[secrets-outside-env]
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Nightly check failed: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} - ${{ github.job }}>"
+            }
+
+  rule-reuse-fuzzer:
+    name: Go Fuzzer (rule reuse)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: .go-version
+
+      - name: go test -fuzz
+        run: go test ./v1/ast -fuzz FuzzCompilerRuleReuse -fuzztime 30m -v -run '^$'
+
+      - name: Dump crashers
+        if: ${{ failure() }}
+        run: find v1/ast/testdata/fuzz/FuzzCompilerRuleReuse ! -type d -print -exec cat {} \;
+
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v4.0.0
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        with:
+          webhook: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }} # zizmor: ignore[secrets-outside-env]
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Nightly check failed: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} - ${{ github.job }}>"
+            }
+
+  govulncheck:
+    name: Go vulnerability check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: .go-version
+
+      - run: cd build/tools && go install tool
+      - run: govulncheck ./...
+
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v4.0.0
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        with:
+          webhook: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }} # zizmor: ignore[secrets-outside-env]
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Nightly check failed: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} - ${{ github.job }}>"
+            }
+
+  security-txt-expiry:
+    name: security.txt not expired
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check Expires mentions the current year
+        run: |
+          year=$(date -u +%Y)
+          if ! grep -q "^Expires: $year" docs/static/.well-known/security.txt; then
+            echo "ERROR: docs/static/.well-known/security.txt has no Expires date in $year. Renew it."
+            exit 1
+          fi
+
+  test-ocp-with-opa-main:
+    name: Test OCP with OPA main
+    uses: ./.github/workflows/test-ocp-with-opa.yaml
+    secrets:
+      slack_webhook_url: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }}
+
+  test-regal-with-opa-main:
+    name: Test Regal with OPA main
+    uses: ./.github/workflows/test-regal-with-opa.yaml
+    secrets:
+      slack_webhook_url: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }}
+
+  test-envoy-with-opa-main:
+    name: Test Envoy with OPA main
+    uses: ./.github/workflows/test-envoy-with-opa.yaml
+    secrets:
+      slack_webhook_url: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }}
+
+  go-get-test:
+    name: Go Get Smoke Test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version: stable
+
+      - name: Test go get and check for retracted dependencies
+        run: |
+          mkdir -p /tmp/go-get-test
+          cd /tmp/go-get-test
+
+          go mod init test-go-get
+          go get github.com/open-policy-agent/opa@main
+
+          go list -mod=mod -m -retracted \
+            -f '{{with .Retracted}}{{$.Path}}@{{$.Version}}: {{join . "; "}}{{end}}' all \
+            > /tmp/retracted-raw.log
+          grep -v '^[[:space:]]*$' /tmp/retracted-raw.log > /tmp/retracted.log || true
+
+          if [ -s /tmp/retracted.log ]; then
+            echo "ERROR: build list contains retracted module versions:"
+            cat /tmp/retracted.log
+            exit 1
+          fi
+
+          echo "Success: no retracted dependencies"
+        timeout-minutes: 30
+
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v4.0.0
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        with:
+          webhook: ${{ secrets.SLACK_NOTIFICATION_WEBHOOK }} # zizmor: ignore[secrets-outside-env]
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Nightly check failed: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} - ${{ github.job }}>"
+            }

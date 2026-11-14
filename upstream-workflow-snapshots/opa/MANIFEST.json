@@ -1,0 +1,110 @@
+{
+  "source": "https://github.com/open-policy-agent/opa.git",
+  "commit": "8d10da6e34b846269f990daa43f39003e79b9dc4",
+  "number_of_original_workflow_files": 17,
+  "original_ci_is_disabled": true,
+  "files": [
+    {
+      "upstream_path": ".github/workflows/actions.lock",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/actions.lock",
+      "git_blob": "2d41a1d913feeb81de278e2c935b8e18d706cec5",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/benchmarks-nightly.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/benchmarks-nightly.yaml",
+      "git_blob": "9884f26b4e01cc4610f63f34f8dccb6043646a62",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/benchmarks.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/benchmarks.yaml",
+      "git_blob": "86644fa846540b54d30822a86dc4513e13e424d5",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/codeql-analysis.yml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/codeql-analysis.yml",
+      "git_blob": "48eea65485f513d7c126e3d7bc5fe81a36463c94",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/issue-check.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/issue-check.yaml",
+      "git_blob": "6f870d8ca964533225722103d6c12609638b366f",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/link-checker.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/link-checker.yaml",
+      "git_blob": "b7624715135e52dc66ea5d6a733d7f5061609f7c",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/nightly.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/nightly.yaml",
+      "git_blob": "baf8b5df0769cdf6c95b88b06e188de1a8264506",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/post-merge.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/post-merge.yaml",
+      "git_blob": "717dbe2c2c17e60f59d23213079cbffbedfad95c",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/post-tag.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/post-tag.yaml",
+      "git_blob": "852d5ad620e8779a51240a4c01a7edf4fb20be38",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/pr-check.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/pr-check.yaml",
+      "git_blob": "8fc583a1be629a5b52ba131e32e7af372b4c5b7c",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/pull-request.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/pull-request.yaml",
+      "git_blob": "7eb650fd8e16dd13a634f60dc653ed19d293d527",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/release-vulnerability-check.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/release-vulnerability-check.yaml",
+      "git_blob": "b3787290553b6c0fff61453d653f228f1281da57",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/scorecards.yml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/scorecards.yml",
+      "git_blob": "513066dea535050c0d8a5dcd86a0b7f161a1b5b0",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/test-envoy-with-opa.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/test-envoy-with-opa.yaml",
+      "git_blob": "c5e4dfc549c63c61fd0006a21bf583b39eba4e50",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/test-ocp-with-opa.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/test-ocp-with-opa.yaml",
+      "git_blob": "2e7b8912b02f9f7bd0f056a64e6a6397c1832f8a",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/test-regal-with-opa.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/test-regal-with-opa.yaml",
+      "git_blob": "6d873da4077bdeb8f1a79164f1cadab78a65ced8",
+      "original_mode": "100644"
+    },
+    {
+      "upstream_path": ".github/workflows/update-implementations.yaml",
+      "reference_path": "upstream-workflow-snapshots/opa/.github/workflows/update-implementations.yaml",
+      "git_blob": "fee487bcdd40fd7d3998753aaa1bb2647f7b57a2",
+      "original_mode": "100644"
+    }
+  ]
+}

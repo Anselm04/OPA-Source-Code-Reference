@@ -1,0 +1,199 @@
+name: Post Tag
+# Note: Because this workflow builds and publishes release
+# artifacts, we intentionally disable caching to prevent
+# cache poisoning attacks during the builds.
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate Code
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Generate
+        run: make clean generate
+
+  release-build:
+    name: Release Build (linux, windows)
+    runs-on: ubuntu-24.04
+    needs: generate
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: .go-version
+          cache: false
+      - uses: jdx/mise-action@v5.2.4
+        with:
+          install: true
+          cache: false
+          mise_toml: |
+            [tools]
+            zig = "0.16.0"
+
+      - name: Git Describe
+        run: git describe --tags
+
+      - name: Build Linux and Windows
+        run: make ci-build-windows ci-go-ci-build-linux ci-go-ci-build-linux-static
+        timeout-minutes: 30
+
+      - name: Build Linux arm64
+        run: make ci-go-ci-build-linux ci-go-ci-build-linux-static
+        timeout-minutes: 30
+        env:
+          GOARCH: arm64
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: binaries-linux-windows
+          path: _release
+
+  release-build-darwin:
+    name: Release Build (darwin)
+    runs-on: macos-15
+    needs: generate
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Git Describe
+        run: git describe --tags
+
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: .go-version
+          cache: false
+
+      - name: Build Darwin
+        run: |
+          make ci-build-darwin GOARCH=amd64
+          make ci-build-darwin ci-build-darwin-arm64-static GOARCH=arm64
+        timeout-minutes: 30
+
+      - name: Upload binaries (darwin)
+        uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: binaries-darwin
+          path: _release
+
+  publish-release:
+    name: Push Latest Release
+    needs: [release-build, release-build-darwin]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set TAG_NAME in Environment
+        # Subsequent jobs will be have the computed tag name
+        run: echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      - name: Download release binaries
+        uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+          path: _release
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Build and Deploy OPA Docker Images
+        id: build-and-deploy
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }} # zizmor: ignore[secrets-outside-env]
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} # zizmor: ignore[secrets-outside-env]
+          DOCKER_IMAGE: ${{ secrets.DOCKER_IMAGE }} # zizmor: ignore[secrets-outside-env]
+        # Only run if required secrets are provided
+        if: ${{ env.DOCKER_USER && env.DOCKER_PASSWORD }}
+        run: make release-ci
+
+      - name: Create or Update Release
+        env:
+          # Required for the GitHub CLI
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./build/github-release.sh --asset-dir=$(make release-dir) --tag=${TAG_NAME}
+
+  integrate-patch-release:
+    name: Integrate Patch Release into main
+    needs: publish-release
+    # Patch releases are tagged on a release branch; X.Y.0 and release candidates are tagged on main.
+    if: ${{ startsWith(github.ref_name, 'v') && !contains(github.ref_name, '-') && !endsWith(github.ref_name, '.0') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # for peter-evans/create-pull-request to push its branch
+      pull-requests: write # for peter-evans/create-pull-request to open the PR
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: .go-version
+          cache: false
+
+      - name: Integrate CHANGELOG and capabilities
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: make release-integrate VERSION="${TAG_NAME#v}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v8.1.1
+        with:
+          token: ${{ secrets.GH_PUSH_TOKEN }} # zizmor: ignore[secrets-outside-env] a PAT is required for the PR to trigger CI
+          base: main
+          branch: automated/integrate-${{ github.ref_name }}
+          delete-branch: true
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          signoff: true
+          title: "release: Integrate ${{ github.ref_name }} patch release"
+          commit-message: "release: Integrate ${{ github.ref_name }} patch release"
+          body: |
+            Copies the CHANGELOG section and capabilities snapshot of ${{ github.ref_name }} from its tag,
+            removes the `Unreleased` CHANGELOG entries it shipped, and regenerates `builtin_metadata.json`.
+
+            Opened automatically by `.github/workflows/post-tag.yaml`.
+          labels: automated pr
+          add-paths: |
+            CHANGELOG.md
+            capabilities/*.json
+            builtin_metadata.json
+            v1/ast/version_index.json

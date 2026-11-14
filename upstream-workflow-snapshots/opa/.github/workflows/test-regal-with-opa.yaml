@@ -1,0 +1,82 @@
+name: Test Regal with OPA
+
+on:
+  workflow_call:
+    secrets:
+      slack_webhook_url:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test-regal-with-opa:
+    name: Test Regal with OPA
+    runs-on: ubuntu-24.04
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.slack_webhook_url }} # zizmor: ignore[secrets-outside-env]
+    steps:
+      - name: Check out OPA code
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          path: opa
+
+      - name: Install Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: opa/.go-version
+          cache-dependency-path: opa/go.sum
+
+      - name: Check out Regal main
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: open-policy-agent/regal
+          ref: main
+          persist-credentials: false
+          path: regal
+
+      - name: Update OPA dependency
+        working-directory: regal
+        run: |
+          go mod edit -replace github.com/open-policy-agent/opa=../opa
+          go mod tidy
+
+      - name: Build
+        working-directory: regal
+        run: go build -tags=regal_standalone
+
+      # Regal's build tasks are written in Rego and run by rq. Regal no longer
+      # lists rq in its go.mod, so build it here against the OPA under test.
+      # Running the tests through build/do.rq makes the nightly parse and
+      # evaluate that script too, which is where the bug fixed in #9140
+      # surfaced. The rq version is the one Regal's own build uses.
+      - name: Build rq against OPA under test
+        run: |
+          RQ_VERSION=$(sed -n 's/^ *RQ_VERSION: *\(v[0-9.]*\).*/\1/p' regal/.github/workflows/build.yaml | head -n 1)
+          test -n "$RQ_VERSION" || { echo "RQ_VERSION not found in Regal's build.yaml"; exit 1; }
+          git clone --depth 1 --branch "$RQ_VERSION" https://git.sr.ht/~charles/rq "$RUNNER_TEMP/rq"
+          cd "$RUNNER_TEMP/rq"
+          go mod edit -replace github.com/open-policy-agent/opa="$GITHUB_WORKSPACE/opa"
+          go mod tidy
+          go build -o "$RUNNER_TEMP/bin/rq" ./cmd/rq
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Test
+        working-directory: regal
+        run: build/do.rq test
+
+      - name: e2e tests
+        working-directory: regal
+        run: build/do.rq e2e
+
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v4.0.0
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        with:
+          webhook: ${{ env.SLACK_WEBHOOK_URL }} # zizmor: ignore[secrets-outside-env]
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Regal compatibility check failed: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} - ${{ github.job }}>"
+            }
