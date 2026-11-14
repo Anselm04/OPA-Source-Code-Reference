@@ -1,0 +1,14 @@
+name: Verify pinned Git source tree opa
+on:
+  push:
+    paths:
+      - '.github/workflows/audit-source-once.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    uses: Anselm04/Macro-source-code-reference-/.github/workflows/reusable-source-audit.yml@main
+    with:
+      upstream_url: https://github.com/open-policy-agent/opa.git
+      upstream_sha: 8d10da6e34b846269f990daa43f39003e79b9dc4
+      audit_slug: opa
